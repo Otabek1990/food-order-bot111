@@ -1,0 +1,63 @@
+import { Context, Telegraf } from 'telegraf';
+import { getSession, resetCart, cartTotal } from '../state/store';
+import { cartInline } from '../keyboards';
+
+export async function renderCart(ctx: Context) {
+  const userId = ctx.from!.id;
+  const session = getSession(userId);
+
+  if (session.cart.length === 0) {
+    await ctx.reply(
+      "🛒 Savatingiz bo'sh.\n\nMenyudan taom tanlab, savatga qo'shishingiz mumkin.",
+      cartInline(false)
+    );
+    return;
+  }
+
+  const lines = session.cart.map((line, i) => {
+    const sum = line.price * line.qty;
+    return `${i + 1}. ${line.name} — ${line.qty} x ${line.price.toLocaleString('ru-RU')} = ${sum.toLocaleString('ru-RU')} so'm`;
+  });
+
+  const total = cartTotal(session);
+
+  await ctx.reply(
+    `🛒 <b>Savatingiz:</b>\n\n${lines.join('\n')}\n\n` +
+      `<b>Jami: ${total.toLocaleString('ru-RU')} so'm</b>`,
+    { parse_mode: 'HTML', ...cartInline(true) }
+  );
+}
+
+export function registerCartHandlers(bot: Telegraf) {
+  // "🛒 Savat" tugmasi (menyudan)
+  bot.action('cart', async (ctx) => {
+    await ctx.answerCbQuery();
+    await renderCart(ctx);
+  });
+
+  // Savatni tozalash
+  bot.action('clear_cart', async (ctx) => {
+    await ctx.answerCbQuery("Savat tozalandi");
+    resetCart(ctx.from!.id);
+    await renderCart(ctx);
+  });
+
+  // Rasmiylashtirish — manzil so'raladi
+  bot.action('checkout', async (ctx) => {
+    const session = getSession(ctx.from!.id);
+
+    if (session.cart.length === 0) {
+      await ctx.answerCbQuery("Savat bo'sh");
+      return;
+    }
+
+    await ctx.answerCbQuery();
+    session.step = 'awaiting_address';
+
+    await ctx.reply(
+      "📍 Buyurtmani rasmiylashtirish uchun yetkazib berish manzilini yozib yuboring.\n\n" +
+        "Masalan: <i>Chilonzor tumani, 5-kvartal, 12-uy, 34-xonadon</i>",
+      { parse_mode: 'HTML' }
+    );
+  });
+}
