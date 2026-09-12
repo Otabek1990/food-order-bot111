@@ -5,6 +5,7 @@ import { getOrder, getOrdersByStatus, updateOrderStatus } from '../state/orders'
 import { formatOrderFull } from '../utils/format';
 import { statusLabel } from '../utils/status';
 import { OrderStatus } from '../types';
+import { adminHomeInline, orderDetailInline, orderListInline } from '../keyboards/admin';
 
 async function sendAdminHome(ctx: Context) {
   await ctx.reply('🛠 <b>Admin panel</b>\n\nBo\'lim tanlang:', {
